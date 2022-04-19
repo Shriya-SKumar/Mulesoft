@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd">
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="7146bc40-b738-4a89-8797-23a998426661" >
+		<db:generic-connection url="jdbc:postgresql://localhost:5432/postgres" driverClassName="org.postgresql.Driver" user="postgres" password="1234" />
+	</db:config>
+	<flow name="getCustomer" doc:id="1277d0b9-ae51-466e-a757-f5a72b7cc39d" >
+		<db:select doc:name="Select" doc:id="3f929513-ec8d-42d3-aad6-eeb252916cbc" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT *from customer]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="6dfae830-16b4-4ed4-a494-0799857d01c9" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="Copy_of_customerapiFlow" doc:id="ca99a424-4cfe-4f32-9a82-313fc4bf060d" >
+		<db:select doc:name="Copy_of_Select" doc:id="272f5dce-7062-4c7b-bade-44120fb0dbf9" config-ref="Database_Config" >
+			<db:sql ><![CDATA[SELECT *from customer]]></db:sql>
+		</db:select>
+		<ee:transform doc:name="Copy_of_Transform Message" doc:id="cdce7cde-f2b2-4b58-bc3b-61b99e189515" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="postCustomer" doc:id="2f4bf729-bd3b-4f03-8878-246410c65f54" >
+		<http:listener doc:name="Listener" doc:id="30766e05-7a71-4238-bb8d-95337f58ee5c" config-ref="customer-api-httpListenerConfig" path="/customer"/>
+		<db:insert doc:name="Insert" doc:id="26a88a1f-17d2-44c6-9637-7363d2c2cd06" config-ref="Database_Config">
+			<db:sql ><![CDATA[Insert INTO customer (cid,firstname,lastname,dob,address,postal,country,ctype) VALUES (:cid,:firstName,:lastName,:dob,:address,:postal,:country,:ctype)]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+cid:payload.cid,
+firstName:payload.firstName,
+lastName:payload.lastName,
+dob:payload.dob,
+address:payload.address,
+postal:payload.postal,
+country:payload.country,
+ctype:payload.ctype
+}]]]></db:input-parameters>
+		</db:insert>
+		<ee:transform doc:name="Transform Message" doc:id="bb5db1e3-7a4d-4a40-9776-d8946da37e9e" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+message: "created"	
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="getCustomerbyID" doc:id="b26ad486-5d06-4aa8-909c-3d1402e66c9a" >
+		<http:listener doc:name="Listener" doc:id="341ae40f-0fac-46d1-a33d-cbf2b9be2b1a" config-ref="customer-api-httpListenerConfig" path="/customer/{cid}"/>
+		<db:select doc:name="Select" doc:id="bef52e36-3aaa-4040-8a07-0d3a48dc2750" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT *from customer WHERE cid=:ID]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	'ID':attributes.uriParams.cid
+}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="94155ebd-d7e0-44a1-8e63-3973473e4592" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="deleteCustomerbyID" doc:id="b673588a-0c0a-4ba8-a7b2-de4d6946c3e1" >
+		<http:listener doc:name="Listener" doc:id="71889084-858d-43e6-8d92-36c36233f3df" config-ref="customer-api-httpListenerConfig" path="/delete"/>
+		<db:delete doc:name="Delete" doc:id="7842e457-a272-42ed-8bbd-2e188b4f5adc" config-ref="Database_Config">
+			<db:sql ><![CDATA[DELETE from customer WHERE cid=:ID]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{
+	'ID':attributes.uriParams.cid
+}]]]></db:input-parameters>
+		</db:delete>
+		<ee:transform doc:name="Transform Message" doc:id="01a25357-e011-4429-bf0d-43e0d308feb5" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="updateCustomer" doc:id="519522cc-5474-49ae-ae7b-6135c29e9b65" >
+		<http:listener doc:name="Listener" doc:id="ac9936ac-628e-419f-8176-fc66f9c41ff0" config-ref="customer-api-httpListenerConfig" path="/update/{cid}"/>
+		<db:update doc:name="Update" doc:id="bf3d89d9-70e4-4499-8e69-37217deff04b" config-ref="Database_Config">
+			<db:sql ><![CDATA[update customer SET firstname=:firstName,lastname=:lastName,address=:address,country=:country where cid=:ID]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{'ID': attributes.uriParams.cid,
+'firstName':payload.firstName,
+'lastName':payload.lastName,
+'address':payload.address,
+'country':payload.country
+
+}]]]></db:input-parameters>
+		</db:update>
+		<ee:transform doc:name="Transform Message" doc:id="0448f0bc-6235-4a3a-ae3b-86086975d7c0" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
